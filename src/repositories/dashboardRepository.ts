@@ -27,7 +27,8 @@ export class DashboardRepository {
       startTime: sessions.startTime,
       endTime: sessions.endTime,
       timeWorked: sessions.timeWorked,
-      status: sessions.status
+      status: sessions.status,
+      totalIssueTime: sql<number>`TIMESTAMPDIFF(SECOND, ${sessions.startTime}, ${sessions.endTime}) - ${sessions.timeWorked}`
     })
     .from(sessions)
     .innerJoin(students, eq(sessions.studentId, students.id))
