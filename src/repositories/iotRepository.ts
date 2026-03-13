@@ -4,7 +4,6 @@ import { eq, and, isNull, sql } from 'drizzle-orm';
 
 export class IotRepository {
 
-
   async findStudentByNfc(nfcUid: string) {
     return await db.query.students.findFirst({
       where: eq(students.nfcUid, nfcUid),
@@ -32,29 +31,25 @@ export class IotRepository {
     return result[0].id;
   }
 
-
-  // IA pour aider à calculer le temps de travail en prenant en compte les pauses (issues)
-  async closeSession(sessionId: number) {
-    await this.closeIssue(sessionId);
-
+  async getSessionPause(sessionId: number) {
     const pauseResult = await db.select({
       totalPause: sql<string>`COALESCE(SUM(${issues.durationSecond}), 0)`
     })
     .from(issues)
     .where(eq(issues.sessionId, sessionId));
 
+    return parseInt(pauseResult[0].totalPause || '0', 10);
+  }
 
-    const totalPause = parseInt(pauseResult[0].totalPause || '0', 10);
-
+  async closeSession(sessionId: number, endTime: Date, timeWorked: number) {
     await db.update(sessions)
       .set({
-        endTime: new Date(),
+        endTime: endTime,
         status: 'Terminée',
-        timeWorked: sql`TIMESTAMPDIFF(SECOND, ${sessions.startTime}, NOW()) - ${totalPause}`
+        timeWorked: timeWorked
       })
       .where(eq(sessions.id, sessionId));
   }
-
 
   async createIssue(sessionId: number) {
     const existing = await db.query.issues.findFirst({
@@ -72,7 +67,6 @@ export class IotRepository {
       });
     }
   }
-
 
   async closeIssue(sessionId: number) {
     await db.update(issues)
