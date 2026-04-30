@@ -14,9 +14,10 @@ sudo apt install nodejs -y
 
 
 sudo apt install mariadb-server mariadb-client -y
+sudo apt install nginx mosquitto mosquitto-clients -y
 
 ```
--MariaDB Config
+-**MariaDB** Config
 
 ```sql
 CREATE DATABASE IotMonitoring CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -31,14 +32,11 @@ EXIT;
 
 ## Initialisation & Installation
 ```
-# 1. Initialiser le package.json
-npm init -y
+git clone https://github.com/PROJET-TECH-H26-YANY/API_IOTmonitoring.git
+cd backend
 
-# 2. Installer les dépendances de PROD
-npm install express mysql2 drizzle-orm mqtt dotenv cors
-
-# 3. Installer les dépendances de DEV (TypeScript + Drizzle Kit)
-npm install -D typescript ts-node nodemon drizzle-kit @types/node @types/express @types/cors
+# 2. Installer les dépendances
+npm install
 ``` 
 
 ## Configuration Environment (.env)
@@ -50,7 +48,7 @@ PORT=3000
 DB_HOST=localhost
 DB_USER=ton_utilisateur
 DB_PASS=ton_mot_de_passe
-DB_NAME=smart_attendance_db
+DB_NAME=IotMonitoring
 MQTT_URL= ip_service
 
 
@@ -63,6 +61,63 @@ npm run db:push
 - lancer le serveur
 ```
 npm run dev
+```
+
+# ngix 
+- crée le fichier 
+```sudo nano /etc/nginx/sites-available/iotmonitoring```
+- Configuration de Mosquitto
+```bash
+# Configuration du serveur MQTT pour l'ESP32
+sudo nano /etc/mosquitto/conf.d/default.conf
+
+# Ajouter ces deux lignes dans le fichier :
+listener 1883
+allow_anonymous true
+
+# Redémarrer Mosquitto
+sudo systemctl restart mosquitto
+```
+**Attention** : changer les variables avec les votres
+- le domaine
+
+```bash
+server {
+    listen 80;
+    server_name api.iot.y-any.org;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+# Commandes d'installation et de sécurisation
+**Attention** : changer les variables avec les votres
+- le domaine
+```bash
+# 1. Activer la configuration Nginx et redémarrer
+sudo ln -s /etc/nginx/sites-available/iotmonitoring /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+
+# 2. Installer Certbot pour Nginx
+sudo apt update
+sudo apt install certbot python3-certbot-nginx -y
+
+# 3. Lancer Certbot (il modifiera automatiquement le fichier Nginx pour le HTTPS)
+sudo certbot --nginx -d api.iot.y-any.org
+```
+
+# Maintenir le serveur en vie
+``` 
+sudo npm install -g pm2
+npm run build
+pm2 start dist/app.js --name "api-iot"
 ```
 
 # Structure du Projet
