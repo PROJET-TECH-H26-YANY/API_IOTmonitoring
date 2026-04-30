@@ -51,6 +51,7 @@ DB_HOST=localhost
 DB_USER=ton_utilisateur
 DB_PASS=ton_mot_de_passe
 DB_NAME=smart_attendance_db
+MQTT_URL= ip_service
 
 
 ```
