@@ -2,7 +2,7 @@
 Auteur : *Yany Boudedja* / Cours : IOT 
 Ce projet constitue l'API Backend et le service IoT pour la gestion automatisée de l'assiduité dans les laboratoires. Il sert de pont entre les objets connectés (ESP32) et l'interface de gestion des professeurs.
 ## setup le serveur
-```
+```bash
 apt update && apt upgrade -y
 apt install curl wget git unzip -y
 
@@ -17,6 +17,17 @@ sudo apt install mariadb-server mariadb-client -y
 sudo apt install nginx mosquitto mosquitto-clients -y
 
 ```
+## Installation de Node-RED
+Node-RED est utilisé pour la gestion des flux IoT. Installez-le globalement via npm :
+
+```bash
+sudo npm install -g --unsafe-perm node-red
+
+# Démarrer Node-RED en arrière-plan avec PM2 (recommandé)
+sudo npm install -g pm2
+pm2 start node-red --name "node-red-iot"
+```
+*Node-RED sera accessible sur le port `1880` (ex: `http://localhost:1880`).*
 -**MariaDB** Config
 
 ```sql

@@ -1,0 +1,344 @@
+[
+    {
+        "id": "tab_iot_lab",
+        "type": "tab",
+        "label": "IoT Smart Lab ",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "mqtt_in_auth",
+        "type": "mqtt in",
+        "z": "tab_iot_lab",
+        "name": "ESP32: Auth",
+        "topic": "labo/device/auth",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "broker_mqtt",
+        "inputs": 0,
+        "x": 110,
+        "y": 80,
+        "wires": [
+            [
+                "save_mac_auth"
+            ]
+        ]
+    },
+    {
+        "id": "save_mac_auth",
+        "type": "change",
+        "z": "tab_iot_lab",
+        "name": "Save MAC",
+        "rules": [
+            {
+                "t": "set",
+                "p": "mac",
+                "pt": "msg",
+                "to": "payload.mac",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 80,
+        "wires": [
+            [
+                "http_auth"
+            ]
+        ]
+    },
+    {
+        "id": "http_auth",
+        "type": "http request",
+        "z": "tab_iot_lab",
+        "name": "API: POST /auth",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://api.iot.y-any.org/api/iot/auth",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 490,
+        "y": 80,
+        "wires": [
+            [
+                "format_cmd",
+                "debug_auth"
+            ]
+        ]
+    },
+    {
+        "id": "format_cmd",
+        "type": "function",
+        "z": "tab_iot_lab",
+        "name": "Format CMD",
+        "func": "var cmd = msg.payload.command;\nvar name = msg.payload.student || \"\";\nvar studentId = msg.payload.studentId || \"\"; \n\n\nmsg.topic = \"labo/device/\" + msg.mac + \"/command\";\n\nvar texteEcran = \"ID: \" + studentId + \" - \" + name;\n\nif (cmd === \"LED_ON_100\") {\n    msg.payload = { \"led\": 100, \"oled\": texteEcran };\n} else if (cmd === \"LED_OFF\") {\n    msg.payload = { \"led\": 0, \"oled\": \"Au revoir\" };\n} else if (cmd === \"LED_RED_BLINK\") {\n    msg.payload = { \"led\": \"blink_red\", \"buzzer\": \"short\" };\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 710,
+        "y": 80,
+        "wires": [
+            [
+                "mqtt_out_cmd"
+            ]
+        ]
+    },
+    {
+        "id": "debug_auth",
+        "type": "debug",
+        "z": "tab_iot_lab",
+        "name": "Debug Auth",
+        "active": true,
+        "tosidebar": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 710,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "mqtt_out_cmd",
+        "type": "mqtt out",
+        "z": "tab_iot_lab",
+        "name": "ESP32: Command",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "broker": "broker_mqtt",
+        "x": 1050,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "mqtt_in_telemetry",
+        "type": "mqtt in",
+        "z": "tab_iot_lab",
+        "name": "ESP32: Telemetry",
+        "topic": "labo/device/telemetry",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "broker_mqtt",
+        "inputs": 0,
+        "x": 120,
+        "y": 300,
+        "wires": [
+            [
+                "anti_cheat"
+            ]
+        ]
+    },
+    {
+        "id": "anti_cheat",
+        "type": "function",
+        "z": "tab_iot_lab",
+        "name": "Filtre Anti-Triche",
+        "func": "let currentDistance = msg.payload.distance;\nlet mac = msg.payload.mac;\nmsg.mac = mac;\n\nlet history = flow.get(\"distanceHistory\") || {};\nlet lastDistance = history[mac] || currentDistance;\nlet diff = Math.abs(currentDistance - lastDistance);\n\nhistory[mac] = currentDistance;\nflow.set(\"distanceHistory\", history);\n\nif (currentDistance > 80) {\n    return [msg, null, null];\n} \nelse if (diff <= 2) {\n    return [null, msg, null];\n} \nelse {\n    return [null, null, msg];\n}",
+        "outputs": 3,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 300,
+        "wires": [
+            [
+                "timer_absence"
+            ],
+            [
+                "timer_triche"
+            ],
+            [
+                "reset_timers",
+                "http_put_issue"
+            ]
+        ]
+    },
+    {
+        "id": "timer_absence",
+        "type": "trigger",
+        "z": "tab_iot_lab",
+        "name": "Timer 2 min",
+        "op1": "",
+        "op2": "ABSENCE",
+        "op1type": "nul",
+        "op2type": "str",
+        "duration": "2",
+        "extend": false,
+        "overrideDelay": false,
+        "units": "min",
+        "reset": "",
+        "bytopic": "all",
+        "topic": "topic",
+        "outputs": 1,
+        "x": 570,
+        "y": 240,
+        "wires": [
+            [
+                "set_absence"
+            ]
+        ]
+    },
+    {
+        "id": "timer_triche",
+        "type": "trigger",
+        "z": "tab_iot_lab",
+        "name": "Timer 3 min (Triche)",
+        "op1": "",
+        "op2": "ABSENCE",
+        "op1type": "nul",
+        "op2type": "str",
+        "duration": "3",
+        "extend": false,
+        "overrideDelay": false,
+        "units": "min",
+        "reset": "",
+        "bytopic": "all",
+        "topic": "topic",
+        "outputs": 1,
+        "x": 590,
+        "y": 300,
+        "wires": [
+            [
+                "set_absence"
+            ]
+        ]
+    },
+    {
+        "id": "reset_timers",
+        "type": "change",
+        "z": "tab_iot_lab",
+        "name": "Reset Timers",
+        "rules": [
+            {
+                "t": "set",
+                "p": "reset",
+                "pt": "msg",
+                "to": "true",
+                "tot": "bool"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 570,
+        "y": 360,
+        "wires": [
+            [
+                "timer_absence",
+                "timer_triche"
+            ]
+        ]
+    },
+    {
+        "id": "set_absence",
+        "type": "function",
+        "z": "tab_iot_lab",
+        "name": "Set Type=ABSENCE",
+        "func": "msg.payload = {\n    \"mac\": msg.mac, \n    \"type\": \"ABSENCE\"\n};\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 840,
+        "y": 260,
+        "wires": [
+            [
+                "http_post_issue"
+            ]
+        ]
+    },
+    {
+        "id": "http_post_issue",
+        "type": "http request",
+        "z": "tab_iot_lab",
+        "name": "API: POST /issue",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://api.iot.y-any.org/api/iot/issue",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1050,
+        "y": 260,
+        "wires": [
+            [
+                "format_buzzer"
+            ]
+        ]
+    },
+    {
+        "id": "http_put_issue",
+        "type": "http request",
+        "z": "tab_iot_lab",
+        "name": "API: PUT /issue",
+        "method": "PUT",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://api.iot.y-any.org/api/iot/issue",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 830,
+        "y": 400,
+        "wires": [
+            [
+                "format_buzzer"
+            ]
+        ]
+    },
+    {
+        "id": "format_buzzer",
+        "type": "function",
+        "z": "tab_iot_lab",
+        "name": "Format Buzzer/LED",
+        "func": "var cmd = msg.payload.command;\n\n// Topic dynamique avec l'adresse MAC\nmsg.topic = \"labo/device/\" + msg.mac + \"/command\";\n\nif (cmd === \"BUZZER_ON\") {\n    msg.payload = { \"buzzer\": true };\n} else if (cmd === \"BUZZER_OFF_LED_ON\") {\n    msg.payload = { \n        \"buzzer\": false,\n        \"led\": 100\n    };\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 1270,
+        "y": 320,
+        "wires": [
+            [
+                "mqtt_out_cmd"
+            ]
+        ]
+    },
+    {
+        "id": "broker_mqtt",
+        "type": "mqtt-broker",
+        "name": "MyMqtt",
+        "broker": "185.53.209.197",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true
+    }
+]
