@@ -36,7 +36,7 @@ export class DashboardService {
     await this.repo.updateSession(sessionId, endTime, Math.max(0, durationSec - totalPause));
 
     // 2. NOUVEAU : Envoi du signal d'extinction à l'ESP32 via MQTT
-    const client = mqtt.connect( process.env.MQTT_URL ||'mqtt://185.53.209.197:1883');
+    const client = mqtt.connect( process.env.MQTT_BROKER_URL ||'mqtt://185.53.209.197:1883');
     
     client.on('connect', () => {
       // On utilise l'adresse MAC de la session pour cibler le bon ESP32
